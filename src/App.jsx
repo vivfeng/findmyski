@@ -224,7 +224,7 @@ function FindMySki() {
     const g=ans.gender||"male";
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:1500,system:SYSTEM_PROMPT,
           messages:[{role:"user",content:`Profile:\n- Priority: ${ans.priority}\n- Level: ${ans.level}\n- Height: ${STEPS[2].format(ans.height??68)} (${hCm}cm)\n- Weight: ${ans.weight??155} lbs\n- Gender: ${g}\n- Boot (Mondo): ${ans.bootMondo}\n${ans.experience?`- Past ski experience: ${ans.experience}`:""}\n\nRecommend the single best 2025/2026 ski.`}],
@@ -244,7 +244,7 @@ function FindMySki() {
     setImgLoading(true);setSkiImage(null);
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:200,
           tools:[{type:"web_search_20250305",name:"web_search"}],
@@ -309,11 +309,19 @@ function FindMySki() {
   return(
     <>
       <link rel="stylesheet" href={FONT_LINK}/>
+      <style>{`
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; overflow-x: hidden; }
+        @media (max-width: 600px) {
+          .fms-main { padding: 0 1rem 5rem !important; }
+          .fms-header-inner { padding: 0 1rem !important; }
+        }
+      `}</style>
       <div style={{background:T.bg,minHeight:"100vh",fontFamily:"'DM Sans', sans-serif"}}>
 
         {/* HEADER */}
         <header style={{position:"sticky",top:0,zIndex:30,background:"rgba(245,244,242,0.92)",backdropFilter:"blur(14px)",WebkitBackdropFilter:"blur(14px)",borderBottom:`1px solid ${T.rule}`}}>
-          <div style={{maxWidth:740,margin:"0 auto",padding:"0 2rem",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div className="fms-header-inner" style={{maxWidth:640,margin:"0 auto",padding:"0 1.5rem",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <button onClick={restart} style={{background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",alignItems:"baseline",gap:"0.45rem"}}>
               <span style={{fontFamily:"'Cormorant Garamond', serif",fontWeight:500,fontSize:"1.2rem",color:T.ink,letterSpacing:"0.04em"}}>FINDMYSKI</span>
               <span style={{width:4,height:4,borderRadius:"50%",background:T.accent,display:"inline-block",marginBottom:1}}/>
@@ -332,7 +340,7 @@ function FindMySki() {
           </div>
         </header>
 
-        <main style={{maxWidth:640,margin:"0 auto",padding:"0 1.5rem 6rem"}}>
+        <main className="fms-main" style={{maxWidth:640,margin:"0 auto",padding:"0 1.5rem 6rem"}}>
 
           {/* INTRO */}
           {isIntro&&(
@@ -522,7 +530,7 @@ function FindMySki() {
               </div>
 
               {/* Style + Profile */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",borderBottom:`1px solid ${T.rule}`}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",borderBottom:`1px solid ${T.rule}`}}>
                 <div style={{padding:"2rem 1.5rem 2rem 0",borderRight:`1px solid ${T.rule}`}}>
                   <SectionLabel>YOUR SKI STYLE</SectionLabel>
                   <p style={body}>{result.skiStyle.summary}</p>
@@ -550,7 +558,7 @@ function FindMySki() {
               {/* Construction */}
               <div style={{padding:"2rem 0",borderBottom:`1px solid ${T.rule}`}}>
                 <SectionLabel>SKI CONSTRUCTION</SectionLabel>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem",marginTop:"1rem"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:"1.5rem",marginTop:"1rem"}}>
                   <div>
                     <p style={{fontSize:"0.61rem",letterSpacing:"0.1em",color:T.inkFaint,margin:"0 0 0.3rem"}}>ROCKER PROFILE</p>
                     <p style={note}>{result.ski.rockerProfile}</p>
