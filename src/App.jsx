@@ -23,7 +23,7 @@ const T = {
 const FONT_LINK = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap";
 
 // ─── Config — paste your deployed Google Apps Script URL here ─────────────────
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyHX1t8PqzA9uvuItCyUn2d7-6ANnNRicjjZKnQcBY3P2RxSwyPG_07gl91x7B8fo6eIQ/exec";
+const APPS_SCRIPT_URL = "/api/send-email";
 
 // ─── Email HTML builder ───────────────────────────────────────────────────────
 function buildEmailHTML(result, answers) {
