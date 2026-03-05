@@ -224,7 +224,7 @@ function FindMySki() {
     const g=ans.gender||"male";
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json"},
+        method:"POST",headers:{"Content-Type":"application/json","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:1500,system:SYSTEM_PROMPT,
           messages:[{role:"user",content:`Profile:\n- Priority: ${ans.priority}\n- Level: ${ans.level}\n- Height: ${STEPS[2].format(ans.height??68)} (${hCm}cm)\n- Weight: ${ans.weight??155} lbs\n- Gender: ${g}\n- Boot (Mondo): ${ans.bootMondo}\n${ans.experience?`- Past ski experience: ${ans.experience}`:""}\n\nRecommend the single best 2025/2026 ski.`}],
@@ -244,7 +244,7 @@ function FindMySki() {
     setImgLoading(true);setSkiImage(null);
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json"},
+        method:"POST",headers:{"Content-Type":"application/json","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:200,
           tools:[{type:"web_search_20250305",name:"web_search"}],
@@ -269,7 +269,7 @@ function FindMySki() {
     try{
       const res=await fetch(APPS_SCRIPT_URL,{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{"Content-Type":"application/json","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           email,
           brand: result.ski.brand,
