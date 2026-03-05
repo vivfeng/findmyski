@@ -269,7 +269,7 @@ function FindMySki() {
     try{
       const res=await fetch(APPS_SCRIPT_URL,{
         method:"POST",
-        mode:"no-cors",headers:{"Content-Type":"text/plain"},
+        headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           email,
           brand: result.ski.brand,
