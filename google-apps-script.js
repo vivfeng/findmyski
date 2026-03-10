@@ -59,18 +59,24 @@ function doPost(e) {
       data.level || "",
     ]);
 
-    // ── Send email with recommendation ─────────────────────────────────────
+    // ── Send email with recommendation (optional — don't fail if no permission) ─
+    var emailSent = false;
     if (data.email && data.htmlBody) {
-      MailApp.sendEmail({
-        to: data.email,
-        subject: "Your Ski Recommendation — " + (data.brand || "") + " " + (data.model || ""),
-        htmlBody: data.htmlBody,
-        name: "FindMySki",
-      });
+      try {
+        MailApp.sendEmail({
+          to: data.email,
+          subject: "Your Ski Recommendation — " + (data.brand || "") + " " + (data.model || ""),
+          htmlBody: data.htmlBody,
+          name: "FindMySki",
+        });
+        emailSent = true;
+      } catch (mailErr) {
+        // Email failed but sheet write succeeded — still return ok
+      }
     }
 
     return ContentService.createTextOutput(
-      JSON.stringify({ status: "ok" })
+      JSON.stringify({ status: "ok", emailSent: emailSent })
     ).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(
