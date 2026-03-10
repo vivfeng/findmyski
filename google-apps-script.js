@@ -7,13 +7,26 @@
  * SETUP:
  * 1. Open https://script.google.com and create a new project
  * 2. Paste this entire file into Code.gs (replace any default content)
- * 3. Click Deploy → New deployment
- * 4. Select type: "Web app"
- * 5. Set "Execute as": Me
- * 6. Set "Who has access": Anyone
- * 7. Click Deploy and copy the Web app URL
- * 8. In your Vercel project settings, add environment variable:
+ * 3. Update appsscript.json with the required OAuth scopes (see below)
+ * 4. Click Deploy → New deployment
+ * 5. Select type: "Web app"
+ * 6. Set "Execute as": Me
+ * 7. Set "Who has access": Anyone
+ * 8. Click Deploy and copy the Web app URL
+ * 9. In your Vercel project settings, add environment variable:
  *    APPS_SCRIPT_URL = <the web app URL you copied>
+ *
+ * REQUIRED appsscript.json:
+ * {
+ *   "timeZone": "America/Los_Angeles",
+ *   "dependencies": {},
+ *   "exceptionLogging": "STACKDRIVER",
+ *   "runtimeVersion": "V8",
+ *   "oauthScopes": [
+ *     "https://www.googleapis.com/auth/spreadsheets",
+ *     "https://www.googleapis.com/auth/gmail.send"
+ *   ]
+ * }
  *
  * SPREADSHEET: https://docs.google.com/spreadsheets/d/18xWVCkxTStXdz6IZPAwhecSAOxdd1ao1RoUzFKumz8w/edit
  */
@@ -59,16 +72,16 @@ function doPost(e) {
       data.level || "",
     ]);
 
-    // ── Send email with recommendation (optional — don't fail if no permission) ─
+    // ── Send email with recommendation ─────────────────────────────────────
     var emailSent = false;
     if (data.email && data.htmlBody) {
       try {
-        MailApp.sendEmail({
-          to: data.email,
-          subject: "Your Ski Recommendation — " + (data.brand || "") + " " + (data.model || ""),
-          htmlBody: data.htmlBody,
-          name: "FindMySki",
-        });
+        GmailApp.sendEmail(
+          data.email,
+          "Your Ski Recommendation — " + (data.brand || "") + " " + (data.model || ""),
+          "Your ski recommendation is attached as HTML.",
+          { htmlBody: data.htmlBody, name: "FindMySki" }
+        );
         emailSent = true;
       } catch (mailErr) {
         return ContentService.createTextOutput(
@@ -85,8 +98,6 @@ function doPost(e) {
   }
 }
 
-// Required for CORS preflight (not typically needed for server-to-server calls,
-// but included for completeness)
 function doGet(e) {
   return ContentService.createTextOutput(
     JSON.stringify({ status: "ok", message: "FindMySki API is running." })
