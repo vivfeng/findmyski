@@ -285,15 +285,20 @@ function FindMySki() {
           htmlBody: html,
         })
       });
-      const data=await res.json();
+      let data;
+      try { data = await res.json(); } catch {
+        setEmailError("Server returned an invalid response. Please try again.");
+        setEmailLoading(false);
+        return;
+      }
       if(data.status==="ok"){
         track("email_submitted",{brand:result.ski.brand,model:result.ski.model});
         setEmailSent(true);
       } else {
-        setEmailError("Something went wrong. Please try again.");
+        setEmailError(data.message || "Something went wrong. Please try again.");
       }
     }catch{
-      setEmailError("Could not reach the server. Check your Apps Script URL in the config.");
+      setEmailError("Could not reach the server. Please try again later.");
     }
     setEmailLoading(false);
   };
