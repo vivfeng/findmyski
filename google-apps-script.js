@@ -71,10 +71,10 @@ function doPost(e) {
         });
         emailSent = true;
       } catch (mailErr) {
-        // Email failed but sheet write succeeded — still return ok
+        return ContentService.createTextOutput(
+          JSON.stringify({ status: "ok", emailSent: false, emailError: mailErr.toString() })
+        ).setMimeType(ContentService.MimeType.JSON);
       }
-    }
-
     return ContentService.createTextOutput(
       JSON.stringify({ status: "ok", emailSent: emailSent })
     ).setMimeType(ContentService.MimeType.JSON);
