@@ -16,10 +16,12 @@ export default async function handler(req, res) {
   }
 
   try {
+    const payload = JSON.stringify(req.body);
+
     const response = await fetch(scriptUrl, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(req.body),
+      body: payload,
       redirect: "follow",
     });
 
@@ -29,12 +31,19 @@ export default async function handler(req, res) {
     try {
       data = JSON.parse(text);
     } catch {
-      // If the response is not JSON, it's likely an Apps Script error page
       return res.status(502).json({
         status: "error",
         message: "Invalid response from Google Apps Script.",
+        debug: { responseStatus: response.status, responseText: text.slice(0, 500) },
       });
     }
+
+    // Append debug info temporarily
+    data._debug = {
+      scriptUrlPrefix: scriptUrl.slice(0, 60) + "...",
+      payloadKeys: Object.keys(req.body || {}),
+      responseStatus: response.status,
+    };
 
     res.status(200).json(data);
   } catch (err) {
