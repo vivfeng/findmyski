@@ -43,6 +43,7 @@ export default async function handler(req, res) {
       scriptUrlPrefix: scriptUrl.slice(0, 60) + "...",
       payloadKeys: Object.keys(req.body || {}),
       responseStatus: response.status,
+      rawResponse: text.slice(0, 500),
     };
 
     res.status(200).json(data);
