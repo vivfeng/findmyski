@@ -22,6 +22,30 @@ const T = {
 
 const FONT_LINK = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap";
 
+// ─── URL state encoding (shareable result URLs) ─────────────────────────────
+async function encodeState(answers, result) {
+  const json = JSON.stringify({ a: answers, r: result });
+  const blob = new Blob([json]);
+  const cs = new CompressionStream('deflate');
+  const compressed = blob.stream().pipeThrough(cs);
+  const buf = await new Response(compressed).arrayBuffer();
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function decodeState(hash) {
+  const b64 = hash.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64 + '==='.slice(0, (4 - b64.length % 4) % 4);
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+  const ds = new DecompressionStream('deflate');
+  const writer = ds.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  const text = await new Response(ds.readable).text();
+  return JSON.parse(text);
+}
+
 // ─── Config — paste your deployed Google Apps Script URL here ─────────────────
 const APPS_SCRIPT_URL = "/api/send-email";
 
@@ -107,8 +131,22 @@ Return ONLY raw valid JSON, no markdown:
     {"outlet": "OutdoorGearLab", "note": "Specific finding about this ski from OGL testing."},
     {"outlet": "SKI Magazine", "note": "Specific finding from SKI Mag testing."},
     {"outlet": "Switchback Travel", "note": "Specific finding from Switchback."}
+  ],
+  "alternatives": [
+    {
+      "brand": "e.g. Blizzard",
+      "model": "e.g. Rustler 9",
+      "pitch": "If you want a more playful, freeride-oriented ride",
+      "oneLiner": "One sentence on what makes this ski different and why it could suit the user.",
+      "length": "e.g. 180cm",
+      "waistWidth": "e.g. 96mm",
+      "flex": "e.g. 85 - Medium-Stiff",
+      "priceRange": "e.g. $650-$750"
+    }
   ]
-}`;
+}
+
+Include 2-3 alternatives. Each must be a DIFFERENT ski (different brand or model) from the primary. Each pitch should highlight a distinct trade-off relevant to the user's profile: e.g. "If you want something easier to turn", "If you want a faster ski for carving", "If you want more float in powder", "If you want a more balanced ride for stability". Make pitches conversational and specific.`;
 
 const STEPS = [
   { id:"priority", question:"What matters most on the mountain?", sub:"This shapes everything about your ski.", label:"PRIORITY", type:"cards", options:[
@@ -186,6 +224,23 @@ function FindMySki() {
   useEffect(()=>{if(current?.type==="slider")setSliderVal(answers[current.id]??current.default);},[step]);
   useEffect(()=>{setAnimKey(k=>k+1);},[step]);
 
+  // Hydrate from URL hash on mount + handle back/forward
+  useEffect(()=>{
+    const loadFromHash=()=>{
+      const hash=window.location.hash.slice(1);
+      if(hash.startsWith('r/')){
+        decodeState(hash.slice(2)).then(({a,r})=>{
+          setAnswers(a);setResult(r);setStep(STEPS.length);
+          setEmail("");setEmailSent(false);setEmailError("");
+          if(r?.ski) fetchSkiImage(r.ski.brand, r.ski.model);
+        }).catch(()=>{});
+      }
+    };
+    loadFromHash();
+    window.addEventListener('hashchange',loadFromHash);
+    return()=>window.removeEventListener('hashchange',loadFromHash);
+  },[]);
+
   const advance=(next)=>{
     if(step<STEPS.length-1)setStep(s=>s+1);
     else fetchResult(next);
@@ -226,8 +281,8 @@ function FindMySki() {
       const res=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",max_tokens:1500,system:SYSTEM_PROMPT,
-          messages:[{role:"user",content:`Profile:\n- Priority: ${ans.priority}\n- Level: ${ans.level}\n- Height: ${STEPS[2].format(ans.height??68)} (${hCm}cm)\n- Weight: ${ans.weight??155} lbs\n- Gender: ${g}\n- Boot (Mondo): ${ans.bootMondo}\n${ans.experience?`- Past ski experience: ${ans.experience}`:""}\n\nRecommend the single best 2025/2026 ski.`}],
+          model:"claude-sonnet-4-20250514",max_tokens:2500,system:SYSTEM_PROMPT,
+          messages:[{role:"user",content:`Profile:\n- Priority: ${ans.priority}\n- Level: ${ans.level}\n- Height: ${STEPS[2].format(ans.height??68)} (${hCm}cm)\n- Weight: ${ans.weight??155} lbs\n- Gender: ${g}\n- Boot (Mondo): ${ans.bootMondo}\n${ans.experience?`- Past ski experience: ${ans.experience}`:""}\n\nRecommend the best 2025/2026 ski, plus 2-3 alternatives.`}],
         }),
       });
       const data=await res.json();
@@ -236,6 +291,7 @@ function FindMySki() {
       setResult(parsed);
       track("recommendation_shown", { brand: parsed.ski.brand, model: parsed.ski.model, length: parsed.ski.length });
       fetchSkiImage(parsed.ski.brand, parsed.ski.model);
+      encodeState(ans, parsed).then(h=>{ window.location.hash='r/'+h; }).catch(()=>{});
     }catch{setResult({error:true});}
     setLoading(false);
   };
@@ -259,6 +315,32 @@ function FindMySki() {
       if(obj.imageUrl&&/^https?:\/\/.+\.(jpe?g|png|webp)/i.test(obj.imageUrl))setSkiImage(obj.imageUrl);
     }catch{setSkiImage(null);}
     setImgLoading(false);
+  };
+
+  const fetchAlternativeResult=async(alt)=>{
+    setLoading(true);setResult(null);setSkiImage(null);
+    setEmail("");setEmailSent(false);setEmailError("");
+    window.scrollTo({top:0,behavior:'smooth'});
+    track("alternative_clicked",{brand:alt.brand,model:alt.model});
+    const hCm=Math.round((answers.height??68)*2.54);
+    const g=answers.gender||"male";
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",max_tokens:2500,system:SYSTEM_PROMPT,
+          messages:[{role:"user",content:`Profile:\n- Priority: ${answers.priority}\n- Level: ${answers.level}\n- Height: ${STEPS[2].format(answers.height??68)} (${hCm}cm)\n- Weight: ${answers.weight??155} lbs\n- Gender: ${g}\n- Boot (Mondo): ${answers.bootMondo}\n${answers.experience?`- Past ski experience: ${answers.experience}`:""}\n\nRecommend the ${alt.brand} ${alt.model} as the primary ski for this profile. Provide full details and 2-3 other alternatives.`}],
+        }),
+      });
+      const data=await res.json();
+      let text=(data.content?.[0]?.text||"").replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(text);
+      setResult(parsed);
+      track("recommendation_shown",{brand:parsed.ski.brand,model:parsed.ski.model,length:parsed.ski.length,source:"alternative"});
+      fetchSkiImage(parsed.ski.brand,parsed.ski.model);
+      encodeState(answers,parsed).then(h=>{window.location.hash='r/'+h;}).catch(()=>{});
+    }catch{setResult({error:true});}
+    setLoading(false);
   };
 
   const sendEmail=async()=>{
@@ -309,6 +391,7 @@ function FindMySki() {
     setSliderVal(null);setSelectedMondo(null);setSelectedShoe(null);
     setShoeExpanded(false);setBootMode("mondo");setExperienceText("");
     setSkiImage(null);setImgLoading(false);
+    history.replaceState(null,'',window.location.pathname+window.location.search);
   };
 
   return(
@@ -501,17 +584,22 @@ function FindMySki() {
           {isResult&&!loading&&result&&!result.error&&(
             <div style={{animation:"rise 0.4s ease"}}>
 
-              {/* Hero */}
-              <div style={{paddingTop:"3rem",paddingBottom:"2.5rem",borderBottom:`1px solid ${T.rule}`}}>
+              {/* Hero — Tier 1 */}
+              <div style={{paddingTop:"4.5rem",paddingBottom:"2.5rem",borderBottom:`1px solid ${T.rule}`}}>
                 <p style={{fontSize:"0.67rem",letterSpacing:"0.15em",color:T.accent,margin:"0 0 1rem",fontWeight:500}}>YOUR MATCH · {result.ski.year}</p>
                 <p style={{fontSize:"0.71rem",color:T.inkFaint,letterSpacing:"0.09em",margin:"0 0 0.25rem",fontWeight:400}}>{result.ski.brand.toUpperCase()}</p>
-                <h2 style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"clamp(2rem,6vw,3rem)",fontWeight:500,color:T.ink,margin:0,lineHeight:1,letterSpacing:"-0.02em"}}>{result.ski.model}</h2>
-                <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"1.05rem",color:T.inkMid,margin:"0.4rem 0 0",fontStyle:"italic"}}>{result.skiStyle.headline}</p>
+                <h2 style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"clamp(2.4rem,7vw,3.6rem)",fontWeight:500,color:T.ink,margin:0,lineHeight:1,letterSpacing:"-0.02em"}}>{result.ski.model}</h2>
+                <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"1.1rem",color:T.inkMid,margin:"0.5rem 0 0",fontStyle:"italic"}}>{result.skiStyle.headline}</p>
+                {skiImage&&(
+                  <div style={{margin:"1.5rem 0 0.5rem",maxHeight:180,overflow:"hidden"}}>
+                    <img src={skiImage} alt={`${result.ski.brand} ${result.ski.model}`} style={{width:"100%",maxHeight:180,objectFit:"contain"}}/>
+                  </div>
+                )}
                 <div style={{display:"flex",gap:"1.75rem",marginTop:"1.25rem",flexWrap:"wrap"}}>
                   {[["Length",result.ski.length],["Waist",result.ski.waistWidth],["Flex",result.ski.flex]].map(([l,v])=>(
                     <div key={l}>
                       <p style={{fontSize:"0.61rem",letterSpacing:"0.1em",color:T.inkFaint,margin:"0 0 0.2rem"}}>{l}</p>
-                      <p style={{fontSize:"0.95rem",color:T.ink,margin:0,fontWeight:500}}>{v}</p>
+                      <p style={{fontSize:"1.05rem",color:T.ink,margin:0,fontWeight:500}}>{v}</p>
                     </div>
                   ))}
                 </div>
@@ -525,12 +613,12 @@ function FindMySki() {
                 </div>
               )}
 
-              {/* Why this ski */}
-              <div style={{padding:"2rem 0",borderBottom:`1px solid ${T.rule}`}}>
+              {/* Why this ski — Tier 1 */}
+              <div style={{padding:"2.5rem 0",borderBottom:`1px solid ${T.rule}`}}>
                 <SectionLabel>WHY THIS SKI</SectionLabel>
-                <p style={body}>{result.ski.whyPerfect}</p>
+                <p style={{fontSize:"0.9rem",color:T.inkMid,lineHeight:1.75,fontWeight:300}}>{result.ski.whyPerfect}</p>
                 {result.ski.awardsOrReviews&&(
-                  <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"1rem",color:T.accent,margin:"1rem 0 0",fontStyle:"italic"}}>{result.ski.awardsOrReviews}</p>
+                  <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"1.1rem",color:T.accent,margin:"1.25rem 0 0",fontStyle:"italic",lineHeight:1.6}}>{result.ski.awardsOrReviews}</p>
                 )}
               </div>
 
@@ -560,62 +648,67 @@ function FindMySki() {
                 </div>
               </div>
 
-              {/* Construction */}
-              <div style={{padding:"2rem 0",borderBottom:`1px solid ${T.rule}`}}>
+              {/* Construction — Tier 3 (de-emphasized) */}
+              <div style={{padding:"1.5rem 0",borderBottom:`1px solid ${T.rule}`}}>
                 <SectionLabel>SKI CONSTRUCTION</SectionLabel>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:"1.5rem",marginTop:"1rem"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:"1.5rem",marginTop:"0.75rem"}}>
                   <div>
-                    <p style={{fontSize:"0.61rem",letterSpacing:"0.1em",color:T.inkFaint,margin:"0 0 0.3rem"}}>ROCKER PROFILE</p>
-                    <p style={note}>{result.ski.rockerProfile}</p>
+                    <p style={{fontSize:"0.58rem",letterSpacing:"0.1em",color:T.inkFaint,margin:"0 0 0.3rem"}}>ROCKER PROFILE</p>
+                    <p style={{fontSize:"0.72rem",color:T.inkFaint,marginTop:"0.5rem",lineHeight:1.65,fontWeight:300}}>{result.ski.rockerProfile}</p>
                   </div>
                   <div>
-                    <p style={{fontSize:"0.61rem",letterSpacing:"0.1em",color:T.inkFaint,margin:"0 0 0.3rem"}}>CONSTRUCTION</p>
-                    <p style={note}>{result.ski.construction}</p>
+                    <p style={{fontSize:"0.58rem",letterSpacing:"0.1em",color:T.inkFaint,margin:"0 0 0.3rem"}}>CONSTRUCTION</p>
+                    <p style={{fontSize:"0.72rem",color:T.inkFaint,marginTop:"0.5rem",lineHeight:1.65,fontWeight:300}}>{result.ski.construction}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Research section */}
+              {/* Research section — Tier 3 (collapsible) */}
               {result.sources?.length>0&&(
-                <div style={{padding:"2rem 0",borderBottom:`1px solid ${T.rule}`}}>
-                  <SectionLabel>RESEARCH BEHIND THIS RECOMMENDATION</SectionLabel>
-                  <p style={{fontSize:"0.78rem",color:T.inkFaint,margin:"0 0 1.25rem",lineHeight:1.65,fontWeight:300}}>
-                    This recommendation draws on independent testing from multiple expert sources who collectively evaluated 175+ models at the 2025 SKI Test in Big Sky, Montana, and in year-long field reviews.
-                  </p>
-                  <div style={{display:"flex",flexDirection:"column"}}>
-                    {result.sources.map((s,i)=>{
-                      const meta=SOURCES_META[s.outlet]||{};
-                      return(
-                        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:"1rem",padding:"0.85rem 0",borderTop:`1px solid ${T.rule}`}}>
-                          <a href={meta.url||"#"} target="_blank" rel="noopener noreferrer"
-                            style={{fontSize:"0.69rem",color:T.inkMid,textDecoration:"none",border:`1px solid ${T.rule}`,borderRadius:2,padding:"0.25rem 0.6rem",fontWeight:400,letterSpacing:"0.04em",flexShrink:0,whiteSpace:"nowrap",transition:"all 0.13s"}}
-                            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.ink;e.currentTarget.style.color=T.ink;}}
-                            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.rule;e.currentTarget.style.color=T.inkMid;}}>
-                            {s.outlet}
+                <details style={{padding:"1.5rem 0",borderBottom:`1px solid ${T.rule}`}}>
+                  <summary style={{cursor:"pointer",fontSize:"0.61rem",letterSpacing:"0.14em",color:T.inkFaint,fontWeight:500,listStyle:"none",WebkitListStyle:"none",display:"flex",alignItems:"center",gap:"0.5rem"}}>
+                    <span>RESEARCH BEHIND THIS RECOMMENDATION</span>
+                    <span style={{fontSize:"0.5rem",transition:"transform 0.2s"}}>▼</span>
+                  </summary>
+                  <div style={{animation:"expand 0.25s ease",marginTop:"1rem"}}>
+                    <p style={{fontSize:"0.75rem",color:T.inkFaint,margin:"0 0 1.25rem",lineHeight:1.65,fontWeight:300}}>
+                      This recommendation draws on independent testing from multiple expert sources who collectively evaluated 175+ models at the 2025 SKI Test in Big Sky, Montana, and in year-long field reviews.
+                    </p>
+                    <div style={{display:"flex",flexDirection:"column"}}>
+                      {result.sources.map((s,i)=>{
+                        const meta=SOURCES_META[s.outlet]||{};
+                        return(
+                          <div key={i} style={{display:"flex",alignItems:"flex-start",gap:"1rem",padding:"0.85rem 0",borderTop:`1px solid ${T.rule}`}}>
+                            <a href={meta.url||"#"} target="_blank" rel="noopener noreferrer"
+                              style={{fontSize:"0.69rem",color:T.inkMid,textDecoration:"none",border:`1px solid ${T.rule}`,borderRadius:2,padding:"0.25rem 0.6rem",fontWeight:400,letterSpacing:"0.04em",flexShrink:0,whiteSpace:"nowrap",transition:"all 0.13s"}}
+                              onMouseEnter={e=>{e.currentTarget.style.borderColor=T.ink;e.currentTarget.style.color=T.ink;}}
+                              onMouseLeave={e=>{e.currentTarget.style.borderColor=T.rule;e.currentTarget.style.color=T.inkMid;}}>
+                              {s.outlet}
+                            </a>
+                            <p style={{fontSize:"0.78rem",color:T.inkMid,margin:0,lineHeight:1.6,fontWeight:300}}>{s.note}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{marginTop:"1.5rem",paddingTop:"1rem",borderTop:`1px solid ${T.rule}`}}>
+                      <p style={{fontSize:"0.62rem",color:T.inkFaint,margin:"0 0 0.6rem",letterSpacing:"0.08em",fontWeight:500}}>ALL EXPERT SOURCES</p>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:"0.4rem"}}>
+                        {Object.entries(SOURCES_META).map(([name,{url}])=>(
+                          <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                            style={{fontSize:"0.67rem",color:T.inkFaint,border:`1px solid ${T.rule}`,borderRadius:2,padding:"0.2rem 0.55rem",textDecoration:"none",fontWeight:300,letterSpacing:"0.02em",transition:"all 0.13s"}}
+                            onMouseEnter={e=>{e.currentTarget.style.color=T.inkMid;e.currentTarget.style.borderColor=T.inkFaint;}}
+                            onMouseLeave={e=>{e.currentTarget.style.color=T.inkFaint;e.currentTarget.style.borderColor=T.rule;}}>
+                            {name}
                           </a>
-                          <p style={{fontSize:"0.78rem",color:T.inkMid,margin:0,lineHeight:1.6,fontWeight:300}}>{s.note}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{marginTop:"1.5rem",paddingTop:"1rem",borderTop:`1px solid ${T.rule}`}}>
-                    <p style={{fontSize:"0.62rem",color:T.inkFaint,margin:"0 0 0.6rem",letterSpacing:"0.08em",fontWeight:500}}>ALL EXPERT SOURCES</p>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:"0.4rem"}}>
-                      {Object.entries(SOURCES_META).map(([name,{url}])=>(
-                        <a key={name} href={url} target="_blank" rel="noopener noreferrer"
-                          style={{fontSize:"0.67rem",color:T.inkFaint,border:`1px solid ${T.rule}`,borderRadius:2,padding:"0.2rem 0.55rem",textDecoration:"none",fontWeight:300,letterSpacing:"0.02em",transition:"all 0.13s"}}
-                          onMouseEnter={e=>{e.currentTarget.style.color=T.inkMid;e.currentTarget.style.borderColor=T.inkFaint;}}
-                          onMouseLeave={e=>{e.currentTarget.style.color=T.inkFaint;e.currentTarget.style.borderColor=T.rule;}}>
-                          {name}
-                        </a>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </details>
               )}
 
-              {/* Where to buy */}
-              <div style={{padding:"2rem 0",borderBottom:`1px solid ${T.rule}`}}>
+              {/* Where to buy — Tier 2 (elevated) */}
+              <div style={{padding:"2rem",margin:"0 -1.5rem",background:T.accentFaint,borderBottom:`1px solid ${T.accentRule}`,borderTop:`1px solid ${T.accentRule}`}}>
                 <SectionLabel>WHERE TO BUY</SectionLabel>
                 <p style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"1.6rem",color:T.ink,fontWeight:500,margin:"0.75rem 0 0.75rem"}}>{result.ski.priceRange}</p>
                 <div style={{background:T.accentFaint,border:`1px solid ${T.accentRule}`,borderRadius:2,padding:"0.7rem 1rem",marginBottom:"1.25rem"}}>
@@ -634,6 +727,19 @@ function FindMySki() {
                 </div>
                 <p style={{fontSize:"0.67rem",color:T.inkFaint,marginTop:"0.85rem",lineHeight:1.6}}>Purchase only from trusted retailers listed above.</p>
               </div>
+
+              {/* Alternatives */}
+              {result.alternatives?.length>0&&(
+                <div style={{padding:"2.5rem 0",borderBottom:`1px solid ${T.rule}`}}>
+                  <SectionLabel>ALSO CONSIDER</SectionLabel>
+                  <p style={{...body,margin:"0.5rem 0 1.5rem"}}>These alternatives match your profile but offer different trade-offs.</p>
+                  <div style={{display:"flex",flexDirection:"column",gap:"0.65rem"}}>
+                    {result.alternatives.map((alt,i)=>(
+                      <AlternativeCard key={i} alt={alt} onSelect={()=>fetchAlternativeResult(alt)}/>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Email capture */}
               <div style={{padding:"2.5rem 0"}}>
@@ -684,6 +790,9 @@ function FindMySki() {
           ::selection{background:${T.accentFaint}}
           ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:${T.rule}}
           textarea{box-sizing:border-box}
+          details summary::-webkit-details-marker{display:none}
+          details summary::marker{display:none}
+          details[open] summary span:last-child{transform:rotate(180deg)}
         `}</style>
       </div>
     </>
@@ -777,6 +886,29 @@ function Stat({label,value}){
       <span style={{fontSize:"0.69rem",color:T.inkFaint,letterSpacing:"0.05em",flexShrink:0,fontWeight:300}}>{label}</span>
       <span style={{fontSize:"0.82rem",color:T.ink,fontWeight:400,textAlign:"right"}}>{value}</span>
     </div>
+  );
+}
+
+function AlternativeCard({alt,onSelect}){
+  const [hov,setHov]=useState(false);
+  return(
+    <button onClick={onSelect} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:T.surface,border:`1px solid ${hov?T.inkFaint:T.rule}`,borderRadius:2,padding:"1.1rem 1.25rem",cursor:"pointer",textAlign:"left",transition:"all 0.15s",width:"100%",fontFamily:"'DM Sans', sans-serif"}}>
+      <div style={{flex:1}}>
+        <p style={{fontSize:"0.72rem",color:T.accent,margin:"0 0 0.25rem",fontWeight:500,fontStyle:"italic"}}>{alt.pitch}</p>
+        <p style={{fontSize:"0.92rem",fontWeight:500,color:T.ink,margin:"0 0 0.2rem"}}>{alt.brand} {alt.model}</p>
+        <p style={{fontSize:"0.76rem",color:T.inkFaint,margin:0,fontWeight:300,lineHeight:1.6}}>{alt.oneLiner}</p>
+        <div style={{display:"flex",gap:"1.25rem",marginTop:"0.6rem",flexWrap:"wrap"}}>
+          {[["Length",alt.length],["Waist",alt.waistWidth],["Flex",alt.flex]].map(([l,v])=>(
+            <div key={l}>
+              <p style={{fontSize:"0.55rem",letterSpacing:"0.08em",color:T.inkFaint,margin:0}}>{l}</p>
+              <p style={{fontSize:"0.78rem",color:T.ink,margin:0,fontWeight:400}}>{v}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <span style={{fontSize:"0.8rem",color:hov?T.ink:T.inkFaint,flexShrink:0,marginLeft:"1rem",transition:"color 0.15s"}}>VIEW →</span>
+    </button>
   );
 }
 
