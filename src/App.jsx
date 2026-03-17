@@ -491,7 +491,7 @@ function FindMySki() {
                 <p style={{fontSize:"0.67rem",letterSpacing:"0.15em",color:T.accent,margin:"0 0 0.85rem",fontWeight:500}}>
                   {String(step+1).padStart(2,"0")} · {current.label}
                 </p>
-                <h1 style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"2.4rem",fontWeight:500,color:T.ink,margin:"0 0 0.5rem",lineHeight:1.15,letterSpacing:"-0.01em"}}>{current.question}</h1>
+                <h2 style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"2.4rem",fontWeight:500,color:T.ink,margin:"0 0 0.5rem",lineHeight:1.15,letterSpacing:"-0.01em"}}>{current.question}</h2>
                 <p style={{fontSize:"0.81rem",color:T.inkMid,margin:0,fontWeight:300,lineHeight:1.65}}>{current.sub}</p>
               </div>
 
@@ -1008,7 +1008,7 @@ function AdminDashboard() {
           <div style={{marginBottom:"2.5rem",borderBottom:`1px solid ${T.rule}`,paddingBottom:"1.5rem",display:"flex",alignItems:"baseline",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem"}}>
             <div>
               <p style={{fontSize:"0.65rem",letterSpacing:"0.15em",color:T.accent,margin:"0 0 0.4rem",fontWeight:500}}>FINDMYSKI</p>
-              <h1 style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"2.2rem",fontWeight:500,color:T.ink,margin:0,letterSpacing:"-0.01em"}}>Analytics Dashboard</h1>
+              <h2 style={{fontFamily:"'Cormorant Garamond', serif",fontSize:"2.2rem",fontWeight:500,color:T.ink,margin:0,letterSpacing:"-0.01em"}}>Analytics Dashboard</h2>
               <p style={{fontSize:"0.75rem",color:T.inkFaint,margin:"0.3rem 0 0",fontWeight:300}}>{events.length} events total · last updated {new Date().toLocaleTimeString()}</p>
             </div>
             <div style={{display:"flex",gap:"0.6rem"}}>
