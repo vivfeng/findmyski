@@ -481,6 +481,58 @@ function FindMySki() {
                   Powered by AI, informed by tester feedback from 175+ models tested in the 2025/2026 season. Always confirm sizing in person before purchase.
                 </p>
               </div>
+
+              {/* FAQ */}
+              <div style={{paddingTop:"2.5rem",paddingBottom:"2.5rem",borderTop:`1px solid ${T.rule}`}}>
+                <p style={{fontSize:"0.62rem",letterSpacing:"0.14em",color:T.inkFaint,margin:"0 0 1.5rem",fontWeight:500}}>FREQUENTLY ASKED QUESTIONS</p>
+                {[
+                  ["How does FindMySki choose a ski for me?", "FindMySki uses AI to cross-reference your ability level, body measurements, skiing priorities, and past experience against expert-tested 2025/2026 ski models. Our recommendations draw on independent testing data from eight leading ski publications — including OutdoorGearLab, SKI Magazine, Blister Review, Switchback Travel, Outside, Powder Magazine, Treeline Review, and Backcountry Magazine — who collectively evaluated over 175 models during the 2025 SKI Test in Big Sky, Montana, and through year-long field reviews."],
+                  ["Is FindMySki free?", "Yes, completely free. No account needed. Answer seven questions and get your recommendation in about 60 seconds."],
+                  ["What sources does FindMySki use?", "We aggregate testing data and editorial reviews from eight expert publications: OutdoorGearLab (in-depth scoring and lab testing), SKI Magazine (annual SKI Test with 50+ testers), Outside (field-tested gear guides), Switchback Travel (detailed comparison reviews), Blister Review (deep-dive performance analysis), Powder Magazine (backcountry and freeride expertise), Treeline Review (beginner and intermediate focused), and Backcountry Magazine (Editors' Choice awards). Each source brings a different testing methodology and perspective, giving our AI a well-rounded view of every ski's strengths and trade-offs."],
+                  ["How accurate are the ski length and width recommendations?", "Our sizing algorithm follows industry-standard formulas based on your height, weight, boot size, and ability level. Beginners typically ski 15–20 cm shorter than their height, intermediates 5–10 cm shorter, and advanced skiers within 0–5 cm. We also factor in weight adjustments and skiing style. That said, we always recommend confirming sizing with a bootfitter or ski shop before purchasing."],
+                  ["Can I share my recommendation?", "Yes. After receiving your match, you can text the full recommendation to yourself — including model, specs, price range, and links to trusted retailers like REI, Evo, Backcountry, and Sports Basement."],
+                  ["What ski categories do you cover?", "FindMySki covers all-mountain, beginner, intermediate, advanced, powder/freeride, and park/freestyle categories for both men's and women's skis. Our database includes skis from major brands like Volkl, Nordica, Blizzard, Atomic, Head, K2, Salomon, Rossignol, Elan, Armada, Dynastar, and Stockli."],
+                  ["How often is the ski data updated?", "Our ski database is updated each season. The current recommendations reflect the 2025/2026 model year, incorporating the latest expert reviews and test results published between fall 2024 and spring 2026."],
+                ].map(([q,a])=>(
+                  <details key={q} style={{borderBottom:`1px solid ${T.rule}`,padding:"0"}}>
+                    <summary style={{cursor:"pointer",padding:"1rem 0",fontSize:"0.86rem",fontWeight:500,color:T.ink,listStyle:"none",WebkitListStyle:"none",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <span>{q}</span>
+                      <span style={{fontSize:"0.7rem",color:T.inkFaint,flexShrink:0,marginLeft:"1rem",transition:"transform 0.2s"}}>▼</span>
+                    </summary>
+                    <div style={{paddingBottom:"1.25rem"}}>
+                      <p style={{fontSize:"0.82rem",color:T.inkMid,margin:0,lineHeight:1.75,fontWeight:300}}>{a}</p>
+                    </div>
+                  </details>
+                ))}
+              </div>
+
+              {/* Detailed Sources */}
+              <div style={{paddingTop:"2rem",paddingBottom:"2.5rem",borderTop:`1px solid ${T.rule}`}}>
+                <p style={{fontSize:"0.62rem",letterSpacing:"0.14em",color:T.inkFaint,margin:"0 0 0.5rem",fontWeight:500}}>OUR EXPERT SOURCES</p>
+                <p style={{fontSize:"0.82rem",color:T.inkMid,margin:"0 0 1.5rem",lineHeight:1.75,fontWeight:300}}>
+                  Every FindMySki recommendation is informed by independent testing from eight leading ski publications. These outlets employ professional testers, certified instructors, and former racers who spend hundreds of days on snow each season evaluating equipment. Here's who powers our analysis:
+                </p>
+                {[
+                  ["OutdoorGearLab", "https://www.outdoorgearlab.com/topics/snow-sports/best-all-mountain-skis", "Rigorous side-by-side testing with numerical scoring across stability, edge grip, playfulness, and value. Their methodology includes multi-day testing sessions at multiple resorts with standardized evaluation criteria."],
+                  ["SKI Magazine", "https://www.skimag.com/gear/ski-reviews/", "Home of the annual SKI Test — the largest independent ski test in North America, held each spring in Big Sky, Montana. Over 50 expert testers evaluate 175+ models across groomed, bumps, steeps, and powder conditions."],
+                  ["Blister Review", "https://blisterreview.com/", "Known for deep-dive, multi-day performance reviews that go beyond first impressions. Their testers log extensive time on each ski across varied conditions before publishing detailed analysis."],
+                  ["Switchback Travel", "https://www.switchbacktravel.com/best-all-mountain-skis", "Comprehensive comparison guides with detailed specs, pros/cons analysis, and real-world performance notes. Particularly strong coverage of beginner and intermediate categories."],
+                  ["Outside", "https://www.outsideonline.com/outdoor-gear/snow-sports-gear/best-all-mountain-skis-tested/", "Field-tested gear guides from the editorial team at Outside (formerly Outside Online). Known for testing gear in real backcountry and resort conditions across the West."],
+                  ["Powder Magazine", "https://www.powder.com/gear/best-all-mountain-skis", "The authority on freeride and backcountry skiing. Their testing emphasizes off-piste performance, powder handling, and big-mountain capability."],
+                  ["Treeline Review", "https://www.treelinereview.com/gearreviews/best-beginner-skis", "Focused reviews for beginner and progressing skiers. Their testing methodology specifically evaluates ease of turn initiation, forgiveness, and confidence-building characteristics."],
+                  ["Backcountry Magazine", "https://backcountrymagazine.com/gear/2026-editors-choice-ski-reviews/", "Annual Editors' Choice awards recognizing standout gear across backcountry, resort, and touring categories. Testing is conducted by experienced backcountry skiers and guides."],
+                ].map(([name,url,desc])=>(
+                  <div key={name} style={{padding:"1rem 0",borderTop:`1px solid ${T.rule}`}}>
+                    <a href={url} target="_blank" rel="noopener noreferrer"
+                      style={{fontSize:"0.82rem",color:T.ink,textDecoration:"none",fontWeight:500,transition:"color 0.15s"}}
+                      onMouseEnter={e=>e.currentTarget.style.color=T.accent}
+                      onMouseLeave={e=>e.currentTarget.style.color=T.ink}>
+                      {name} →
+                    </a>
+                    <p style={{fontSize:"0.78rem",color:T.inkFaint,margin:"0.35rem 0 0",lineHeight:1.7,fontWeight:300}}>{desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
