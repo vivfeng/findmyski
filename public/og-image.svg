@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f5f4f2"/>
+  <rect x="0" y="0" width="1200" height="4" fill="#b85c6e"/>
+
+  <!-- Logo -->
+  <text x="80" y="80" font-family="Georgia, serif" font-size="28" font-weight="500" fill="#141412" letter-spacing="2">FINDMYSKI</text>
+  <circle cx="248" cy="74" r="4" fill="#b85c6e"/>
+
+  <!-- Season label -->
+  <text x="80" y="180" font-family="Arial, sans-serif" font-size="16" fill="#b85c6e" letter-spacing="4" font-weight="500">2025 / 2026 SEASON</text>
+
+  <!-- Main headline -->
+  <text x="80" y="280" font-family="Georgia, serif" font-size="72" font-weight="500" fill="#141412">Find the ski</text>
+  <text x="80" y="370" font-family="Georgia, serif" font-size="72" font-weight="500" fill="#48463f" font-style="italic">built for you.</text>
+
+  <!-- Subtext -->
+  <text x="80" y="440" font-family="Arial, sans-serif" font-size="22" fill="#9b9891" font-weight="300">7 questions · One precise, expert-backed recommendation</text>
+
+  <!-- Divider -->
+  <line x1="80" y1="490" x2="1120" y2="490" stroke="#e2e0db" stroke-width="1"/>
+
+  <!-- Sources -->
+  <text x="80" y="530" font-family="Arial, sans-serif" font-size="14" fill="#9b9891" letter-spacing="2" font-weight="500">SOURCED FROM</text>
+  <text x="80" y="570" font-family="Arial, sans-serif" font-size="18" fill="#48463f" font-weight="300">OutdoorGearLab · SKI Magazine · Blister · Switchback · Outside · Powder · and more</text>
+</svg>
