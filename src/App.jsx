@@ -278,8 +278,8 @@ function FindMySki() {
     const hCm=Math.round((ans.height??68)*2.54);
     const g=ans.gender||"male";
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      const res=await fetch("/api/anthropic",{
+        method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:2500,system:SYSTEM_PROMPT,
           messages:[{role:"user",content:`Profile:\n- Priority: ${ans.priority}\n- Level: ${ans.level}\n- Height: ${STEPS[2].format(ans.height??68)} (${hCm}cm)\n- Weight: ${ans.weight??155} lbs\n- Gender: ${g}\n- Boot (Mondo): ${ans.bootMondo}\n${ans.experience?`- Past ski experience: ${ans.experience}`:""}\n\nRecommend the best 2025/2026 ski, plus 2-3 alternatives.`}],
@@ -299,8 +299,8 @@ function FindMySki() {
   const fetchSkiImage=async(brand,model)=>{
     setImgLoading(true);setSkiImage(null);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      const res=await fetch("/api/anthropic",{
+        method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:200,
           tools:[{type:"web_search_20250305",name:"web_search"}],
@@ -325,8 +325,8 @@ function FindMySki() {
     const hCm=Math.round((answers.height??68)*2.54);
     const g=answers.gender||"male";
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      const res=await fetch("/api/anthropic",{
+        method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:2500,system:SYSTEM_PROMPT,
           messages:[{role:"user",content:`Profile:\n- Priority: ${answers.priority}\n- Level: ${answers.level}\n- Height: ${STEPS[2].format(answers.height??68)} (${hCm}cm)\n- Weight: ${answers.weight??155} lbs\n- Gender: ${g}\n- Boot (Mondo): ${answers.bootMondo}\n${answers.experience?`- Past ski experience: ${answers.experience}`:""}\n\nRecommend the ${alt.brand} ${alt.model} as the primary ski for this profile. Provide full details and 2-3 other alternatives.`}],
